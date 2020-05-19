@@ -17,12 +17,35 @@ class WebcheckPluginRemote(RemoteBasePlugin):
         self.name = self.config["name"]
         self.proxy = self.config["proxy"]
         self.entity_id = self.config["entityid"]
+        self.connection_type = self.config["type"]
 
 
     def query(self, **kwargs):
         group = self.topology_builder.create_group(GROUP_NAME, GROUP_NAME)
         device_name = self.name
         device = group.create_device(device_name, device_name)
+        if self.connection_type == 'HTTP':
+          state = self.http_query(device)
+        elif self.connection_type == 'TCP':
+          state = self.tcp_query(device)
+        device.absolute(key='availability', value=state)
+
+
+    def tcp_query(self, device, **kwargs):
+      tcp_url = self.url.split(':')[0]
+      tcp_port = self.url.split(':')[1]
+      s = socket.socket(socket.AF_IFNET, socket.SOCK_STREAM)
+      try:
+        s.connect((tcp_url,tcp_port))
+        state = 1
+        s.close()
+      except:
+        state = 0
+      return state      
+
+
+    def http_query(self, device, **kwargs):
+
         try:
           if self.proxy == '':
             webcheck = requests.get(self.url, timeout=self.timeout, verify=False)
@@ -37,9 +60,9 @@ class WebcheckPluginRemote(RemoteBasePlugin):
         except requests.exceptions.RequestException as e:
           state = 0
           self.problem_description = "Unknown error received: " + e
-          self.push_error(device=device)          
-        device.absolute(key='availability', value=state)
-        
+          self.push_error(device=device)
+        return state
+
 
     def process_result(self, webcheck, device, **kwargs):
         '''
@@ -69,6 +92,7 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
     def push_error(self, device, **kwargs):
         '''
+
         Creates a custom info event for the failing webcheck
         and also pushes an availability problem to the entity
         specified in the configuration through the Dynatrace API.
