@@ -48,7 +48,6 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
 
     def http_query(self, device, **kwargs):
-
         try:
           if self.proxy == '':
             webcheck = requests.get(self.url, timeout=self.timeout, verify=False)
@@ -56,6 +55,10 @@ class WebcheckPluginRemote(RemoteBasePlugin):
             proxy_dict = {"http": self.proxy, "https": self.proxy}
             webcheck = requests.get(self.url, timeout=self.timeout, proxies=proxy_dict, verify=False)
           state = self.process_result(webcheck, device)
+        except requests.exceptions.ConnectionError:
+          state = 0
+          self.problem_description = "Connection error"
+          self.push_error(device=device)
         except requests.exceptions.Timeout:
           state = 0
           self.problem_description = "Timeout of " + str(self.timeout) + " seconds reached."
@@ -81,11 +84,11 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
         if code_result == None:
           state = 0
-          self.problem_description = "HTTP response code " + code + " does not match code regex."
+          self.problem_description = "HTTP response code " + code + " does not match code regex" + self.expected_code + " ."
           self.push_error(device=device)
         elif body_result == None:
           state = 0
-          self.problem_description = "Response body regex check failed."
+          self.problem_description = "Response body regex " + self.expected_body + " does not match response's body.\n" + body
           self.push_error(device=device)
         else:
           state = 1
@@ -95,7 +98,6 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
     def push_error(self, device, **kwargs):
         '''
-
         Creates a custom info event for the failing webcheck
         and also pushes an availability problem to the entity
         specified in the configuration through the Dynatrace API.
