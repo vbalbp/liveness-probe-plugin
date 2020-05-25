@@ -44,6 +44,8 @@ class WebcheckPluginRemote(RemoteBasePlugin):
         s.close()
       except:
         state = 0
+        self.problem_description = "TCP Connection unsuccessful"
+        self.push_error(device=device)
       return state      
 
 
