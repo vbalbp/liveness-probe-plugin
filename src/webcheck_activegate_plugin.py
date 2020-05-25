@@ -50,7 +50,7 @@ class WebcheckPluginRemote(RemoteBasePlugin):
           if self.proxy == '':
             webcheck = requests.get(self.url, timeout=self.timeout, verify=False)
           else:
-            proxy_dict = {"http": self.proxy}
+            proxy_dict = {"http": self.proxy, "https": self.proxy}
             webcheck = requests.get(self.url, timeout=self.timeout, proxies=proxy_dict, verify=False)
           state = self.process_result(webcheck, device)
         except requests.exceptions.Timeout:

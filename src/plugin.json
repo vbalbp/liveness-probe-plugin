@@ -1,6 +1,6 @@
 {
   "name": "custom.remote.python.webcheck",
-  "version": "1.0.65",
+  "version": "1.0.66",
   "type": "python",
   "entity": "CUSTOM_DEVICE",
   "metricGroup": "tech.Custom_Technology",
