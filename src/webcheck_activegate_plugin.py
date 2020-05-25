@@ -1,5 +1,6 @@
 import requests
 import re
+import socket
 from ruxit.api.base_plugin import RemoteBasePlugin
 import logging
 
@@ -34,7 +35,7 @@ class WebcheckPluginRemote(RemoteBasePlugin):
     def tcp_query(self, device, **kwargs):
       tcp_url = self.url.split(':')[0]
       tcp_port = self.url.split(':')[1]
-      s = socket.socket(socket.AF_IFNET, socket.SOCK_STREAM)
+      s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       try:
         s.connect((tcp_url,tcp_port))
         state = 1
