@@ -1,15 +1,15 @@
 {
-  "name": "custom.remote.python.webcheck",
-  "version": "1.0.73",
+  "name": "custom.remote.python.liveness",
+  "version": "1.0.0",
   "type": "python",
   "entity": "CUSTOM_DEVICE",
   "metricGroup": "tech.Custom_Technology",
   "processTypeNames": ["PYTHON"],
-  "technologies": ["ActiveGate Webcheck"],
+  "technologies": ["Liveness Probe"],
   "favicon": "https://images-na.ssl-images-amazon.com/images/I/61abis-PINL.png",
   "source": {
-    "package": "webcheck_activegate_plugin",
-    "className": "WebcheckPluginRemote",
+    "package": "liveness_probe_activegate_plugin",
+    "className": "LivenessProbePluginRemote",
     "install_requires": ["requests>=2.6.0"],
     "activation": "Remote"
   },
@@ -26,8 +26,8 @@
         {
           "alert_id": "custom_availability_alert",
           "event_type": "AVAILABILITY_EVENT",
-          "event_name": "Webcheck unavailable",
-          "description": "Webcheck is failing for {entityname}.",
+          "event_name": "Liveness Probe is failing",
+          "description": "Liveness Probe is failing for {entityname}.",
           "threshold": 1,
           "alert_condition": "BELOW",
           "samples": 4,
@@ -84,7 +84,7 @@
     }
   ],
   "configUI": {
-        "displayName": "Webcheck ActiveGate Extension",
+        "displayName": "Liveness Probe ActiveGate Extension",
         "properties": [
 			{"key" : "url",
 			"displayName" :  "URL",
@@ -139,7 +139,7 @@
             {
                 "group": "Metrics",
                 "title": "Availability",
-                "description": "Shows the availability of the webcheck. AS long as there is data, it's available.",
+                "description": "Shows the availability of the webcheck. 0 means unavailable.",
                 "series": [
                     {
                         "key": "availability",
@@ -158,7 +158,7 @@
             {
                 "group": "Metrics",
                 "title": "Response Time",
-                "description": "Server-side response time",
+                "description": "Server-side response time. Available only for HTTP probes",
                 "series": [
                     {
                         "key": "responsetime",

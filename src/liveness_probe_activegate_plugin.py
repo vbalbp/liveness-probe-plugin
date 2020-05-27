@@ -1,16 +1,29 @@
-import requests
+'''
+Code for the Liveness Probe Plugin extension for Dynatrace's environment ActiveGates.
+From the ActiveGate, use HTTP or TCP to connect to an external endpoint and determine if it's available or not.
+Make sure to change the ``API_ENDPOINT`` and ``API_TOKEN`` to the values of your environment
+(Check https://www.dynatrace.com/support/help/dynatrace-api/environment-api/events/post-event/ for more information about the called endpoint)
+'''
+
+import logging
 import re
+import requests
 import socket
 import time
+
 from ruxit.api.base_plugin import RemoteBasePlugin
-import logging
 
 logger = logging.getLogger(__name__)
-GROUP_NAME = "WebChecks"
+GROUP_NAME = "Liveness Probe"
+API_ENDPOINT = "https://{your-domain}/e/{your-environment}/api/v1/events"
+API_TOKEN = "xxxxxxxxxxxxxxxxxxxxx"
 
-class WebcheckPluginRemote(RemoteBasePlugin):
+class LivenessProbePluginRemote(RemoteBasePlugin):
 
     def initialize(self, **kwargs):
+        '''
+        Pass on configuration parameters to the class.
+        '''
         logger.info("Config: %s", self.config)
         self.url = self.config["url"]
         self.timeout = self.config["timeout"]
@@ -23,6 +36,10 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
 
     def query(self, **kwargs):
+        '''
+        Method present in RemoteBasePlugin as abstract, overwritten in the plugin.
+        Called each and every execution of the plugin.
+        '''
         group = self.topology_builder.create_group(GROUP_NAME, GROUP_NAME)
         device_name = self.name
         device = group.create_device(device_name, device_name)
@@ -34,22 +51,40 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
 
     def tcp_query(self, device, **kwargs):
-      tcp_url = self.url.split(':')[0]
-      tcp_port = int(self.url.split(':')[1])
-      s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      try:
-        s.connect((tcp_url,tcp_port))
-        time.sleep(self.timeout)
-        state = 1
-        s.close()
-      except:
-        state = 0
-        self.problem_description = "TCP Connection unsuccessful"
-        self.push_error(device=device)
-      return state      
+        '''
+        Establish a TCP connection and determine if it works or not.
+
+        Parameters:
+          device(ruxit.api.topology_builder.MetricSink): Dynatrace defined object used for creating a technology.
+
+        Returns:
+          state (int): 0 (unavailable) or 1 (available). 
+        '''
+        tcp_url = self.url.split(':')[0]
+        tcp_port = int(self.url.split(':')[1])
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+          s.connect((tcp_url,tcp_port))
+          time.sleep(self.timeout)
+          state = 1
+          s.close()
+        except:
+          state = 0
+          self.problem_description = "TCP Connection unsuccessful"
+          self.push_error(device=device)
+        return state      
 
 
     def http_query(self, device, **kwargs):
+        '''
+        EStablish an HTTP connection and determine if it works or not, also based onthe configuration of the endpoint.
+
+        Parameters:
+          device(ruxit.api.topology_builder.MetricSink): Dynatrace defined object used for creating a technology.
+
+        Returns:
+          state (int): 0 (unavailable) or 1 (available). 
+        '''
         try:
           if self.proxy == '':
             webcheck = requests.get(self.url, timeout=self.timeout, verify=False)
@@ -75,7 +110,14 @@ class WebcheckPluginRemote(RemoteBasePlugin):
     def process_result(self, webcheck, device, **kwargs):
         '''
         When a response is correctly received by the GET request,
-        process it to send data to Dynatrace
+        process it to send data to Dynatrace.
+
+        Parameters:
+          webcheck(requests.Response): The response from the HTTP request containing code and body.
+          device(ruxit.api.topology_builder.MetricSink): Dynatrace defined object used for creating a technology.
+
+        Returns:
+          state (int): 0 (unavailable) or 1 (available). 
         '''
         code = str(webcheck.status_code)
         body = webcheck.text
@@ -86,7 +128,7 @@ class WebcheckPluginRemote(RemoteBasePlugin):
 
         if code_result == None:
           state = 0
-          self.problem_description = "HTTP response code " + code + " does not match code regex" + self.expected_code + " ."
+          self.problem_description = "HTTP response code " + code + " does not match code regex: " + self.expected_code + " ."
           self.push_error(device=device)
         elif body_result == None:
           state = 0
@@ -103,6 +145,9 @@ class WebcheckPluginRemote(RemoteBasePlugin):
         Creates a custom info event for the failing webcheck
         and also pushes an availability problem to the entity
         specified in the configuration through the Dynatrace API.
+
+        Parameters:
+          device(ruxit.api.topology_builder.MetricSink): Dynatrace defined object used for creating a technology.
         '''
         device.report_custom_info_event(title = "Webcheck " + self.name + " is failing")
         if self.entity_id != '':
@@ -118,4 +163,4 @@ class WebcheckPluginRemote(RemoteBasePlugin):
             "description": self.problem_description
           }
           headers = {"accept": "application/json", "Content-Type": "application/json"}
-          requests.post("https://hyf63039.sprint.dynatracelabs.com/api/v1/events?Api-Token=ZCIW4Vr2SvaykDKXENQM9", json=request_body, headers=headers)
+          requests.post(API_ENDPOINT + "?Api-Token=" + API_TOKEN, json=request_body, headers=headers)
